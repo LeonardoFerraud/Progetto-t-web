@@ -18,22 +18,28 @@ import com.example.demo.dto.EventoRequest;
 import com.example.demo.dto.EventoResponse;
 import com.example.demo.entity.Evento;
 import com.example.demo.service.AgendaService;
+import com.example.demo.service.SessioneUtente;
+
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api/eventi")
 public class AgendaController {
 
     private final AgendaService agendaService;
+    private final SessioneUtente sessioneUtente;
 
-    public AgendaController(AgendaService agendaService) {
+    public AgendaController(AgendaService agendaService, SessioneUtente sessioneUtente) {
         this.agendaService = agendaService;
+        this.sessioneUtente = sessioneUtente;
     }
 
     @GetMapping
     public List<EventoResponse> trovaEventi(
-            @RequestParam Long utenteId,
+            HttpSession sessione,
             @RequestParam(required = false) String giorno,
             @RequestParam(required = false) Integer ora) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         return agendaService.trovaEventiUtente(utenteId, giorno, ora)
                 .stream()
                 .map(this::toResponse)
@@ -43,14 +49,16 @@ public class AgendaController {
     @GetMapping("/{eventoId}")
     public EventoResponse trovaEvento(
             @PathVariable Long eventoId,
-            @RequestParam Long utenteId) {
+            HttpSession sessione) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         return toResponse(agendaService.trovaEventoPerId(eventoId, utenteId));
     }
 
     @PostMapping
     public ResponseEntity<EventoResponse> creaEvento(
             @RequestBody EventoRequest richiesta,
-            @RequestParam Long utenteId) {
+            HttpSession sessione) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         Evento evento = agendaService.creaEvento(richiesta, utenteId);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(evento));
     }
@@ -59,29 +67,33 @@ public class AgendaController {
     public EventoResponse aggiornaEvento(
             @PathVariable Long eventoId,
             @RequestBody EventoRequest richiesta,
-            @RequestParam Long utenteId) {
+            HttpSession sessione) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         return toResponse(agendaService.aggiornaEvento(eventoId, richiesta, utenteId));
     }
 
     @DeleteMapping("/{eventoId}")
     public ResponseEntity<Void> eliminaEvento(
             @PathVariable Long eventoId,
-            @RequestParam Long utenteId) {
+            HttpSession sessione) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         agendaService.eliminaEvento(eventoId, utenteId);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/cella")
     public ResponseEntity<Void> eliminaEventiCella(
-            @RequestParam Long utenteId,
+            HttpSession sessione,
             @RequestParam String giorno,
             @RequestParam Integer ora) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         agendaService.eliminaEventiCella(utenteId, giorno, ora);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping
-    public ResponseEntity<Void> eliminaEventiUtente(@RequestParam Long utenteId) {
+    public ResponseEntity<Void> eliminaEventiUtente(HttpSession sessione) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         agendaService.eliminaEventiUtente(utenteId);
         return ResponseEntity.noContent().build();
     }

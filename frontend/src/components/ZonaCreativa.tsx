@@ -3,28 +3,78 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { CardForm } from './cardIdea';
 import { Card } from './Card';
+import { caricaCategorie, caricaIdee, creaIdea, eliminaIdeaDalServer } from '../creativa';
+import type { CategoriaDto } from '../creativa';
 
 const ZonaCreativa = () => {
 
-    const [listaIdee, setListaIdee] = useState<CardData[]>(() => {
-        const ideeSalvate = localStorage.getItem('CardData');
-        if(ideeSalvate !== null){
-            return JSON.parse(ideeSalvate);
-        }
-        return[];
-    });
+    const [listaIdee, setListaIdee] = useState<CardData[]>([]);
+    const [errore, setErrore] = useState('');
+    const [categorie, setCategorie] = useState<CategoriaDto[]>([]);
 
     useEffect(() => {
-        localStorage.setItem('CardData', JSON.stringify(listaIdee));
-    }, [listaIdee]);
-    //Ogni volta che la lista delle idee viene modificata aggiorna automaticamente il salvataggio nel browser.
+        caricaIdee()
+            .then(idee => {
+                setListaIdee(idee.map(idea => ({
+                    id: idea.id,
+                    titolo: idea.titolo,
+                    categoria: idea.categoria ?? '',
+                    descrizione: idea.descrizione ?? '',
+                    budget: idea.budget ?? 0,
+                    colore: idea.colore,
+                })));
+            })
+            .catch(() => {
+                setErrore('Non è stato possibile caricare le idee.');
+            });
+    }, []);
 
-    const addIdea = (nuovaIdea: CardData) => {
-        setListaIdee(prev => [...prev, { ...nuovaIdea, id: Date.now() }]); //cicla la lista aggiungendo al fondo l'idea
+    useEffect(() => {
+        caricaCategorie()
+            .then(dati => {
+                setCategorie(dati);
+            })
+            .catch(() => {
+                setErrore('Non è stato possibile caricare le categorie.');
+            });
+    }, []);
+
+    const addIdea = async (nuovaIdea: CardData) => {
+        const categoriaId =
+            categorie.find(categoria => categoria.nome === nuovaIdea.categoria)?.id ?? null;
+
+        try {
+            const ideaSalvata = await creaIdea({
+                titolo: nuovaIdea.titolo,
+                descrizione: nuovaIdea.descrizione,
+                categoriaId,
+                budget: nuovaIdea.budget,
+                colore: nuovaIdea.colore,
+            });
+
+            setListaIdee(prev => [...prev, {
+                id: ideaSalvata.id,
+                titolo: ideaSalvata.titolo,
+                categoria: ideaSalvata.categoria ?? '',
+                descrizione: ideaSalvata.descrizione ?? '',
+                budget: ideaSalvata.budget ?? 0,
+                colore: ideaSalvata.colore,
+            }]);
+
+            setErrore('');
+        } catch {
+            setErrore('Non è stato possibile salvare l’idea.');
+        }
     };
 
-    const deleteIdea = (id: number) => {
-        setListaIdee(prev => prev.filter(idea => idea.id !== id));
+    const deleteIdea = async (id: number) => {
+        try {
+            await eliminaIdeaDalServer(id);
+            setListaIdee(prev => prev.filter(idea => idea.id !== id));
+            setErrore('');
+        } catch {
+            setErrore('Non è stato possibile eliminare l’idea.');
+        }
     };
 
     return(
@@ -39,6 +89,8 @@ const ZonaCreativa = () => {
                     </p>
                 </div>
             </header>
+
+            {errore && <p role="alert">{errore}</p>}
 
             <div className="creative-board" aria-label="Lavagna delle idee">
                 {listaIdee.length === 0 && (
@@ -68,7 +120,7 @@ const ZonaCreativa = () => {
             </div>
 
             <div className="card-form-container" id="idea-form-panel">
-                <CardForm onSubmit={addIdea} />
+                <CardForm categorie={categorie} onSubmit={addIdea} />
             </div>
 
         </section>

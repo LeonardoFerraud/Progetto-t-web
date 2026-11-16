@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from 'react';
 import Evento from './formEvento';
 import type { evento } from './formEvento';
 import HideEvents from './hideEvento';
+import {
+    caricaEventi,
+    creaEvento,
+    eliminaEventiCella,
+    eliminaTuttiEventi,
+} from '../agenda';
 
 const Agenda = () => {
 
@@ -19,36 +25,70 @@ const Agenda = () => {
     //creazione delle righe (dalle 6 alle 24)
     const righe = Array.from({ length: 19 }, (_, i) => i + 6);
 
-    // all'avvio leggo gli eventi già salvati nel local storage
-    const [listaEventi, setListaEventi] = useState<evento[]>(() => {
-        const eventiSalvati = localStorage.getItem('eventi');
-        if (eventiSalvati !== null){
-            return JSON.parse(eventiSalvati);
-        }
-        return [];
-    });
+    const [listaEventi, setListaEventi] = useState<evento[]>([]);
+    const [errore, setErrore] = useState('');
 
-    // chiamata dal form quando l'utente crea un evento
-    const addEvento = (nuovoEvento: evento) => {
-        const nuovaLista = [...listaEventi, nuovoEvento];
-        setListaEventi(nuovaLista);
-        localStorage.setItem('eventi', JSON.stringify(nuovaLista));
-    }
+    useEffect(() => {
+        caricaEventi()
+            .then(eventiBackend => {
+                setListaEventi(eventiBackend.map(eventoBackend => ({
+                    id: eventoBackend.id,
+                    titolo: eventoBackend.titolo,
+                    colonna: eventoBackend.giorno,
+                    riga: eventoBackend.ora,
+                    colore: eventoBackend.colore,
+                })));
+            })
+            .catch(() => {
+                setErrore('Non è stato possibile caricare gli eventi.');
+            });
+    }, []);
+
+    const addEvento = async (nuovoEvento: evento) => {
+        try {
+            const eventoSalvato = await creaEvento({
+                titolo: nuovoEvento.titolo,
+                giorno: nuovoEvento.colonna,
+                ora: nuovoEvento.riga,
+                colore: nuovoEvento.colore,
+            });
+
+            setListaEventi(prev => [...prev, {
+                id: eventoSalvato.id,
+                titolo: eventoSalvato.titolo,
+                colonna: eventoSalvato.giorno,
+                riga: eventoSalvato.ora,
+                colore: eventoSalvato.colore,
+            }]);
+            setErrore('');
+        } catch {
+            setErrore('Non è stato possibile salvare l’evento.');
+        }
+    };
 
     // elimina gli eventi della cella scelta (giorno + ora)
-    const eliminaEvento = (colonna: string, riga: number) => {
-        const nuovaLista = listaEventi.filter(
-            (e) => !(e.colonna === colonna && e.riga === riga)
-        );
-        setListaEventi(nuovaLista);
-        localStorage.setItem('eventi', JSON.stringify(nuovaLista));
-    }
+    const eliminaEvento = async (giorno: string, ora: number) => {
+        try {
+            await eliminaEventiCella(giorno, ora);
+            setListaEventi(prev => prev.filter(
+                evento => !(evento.colonna === giorno && evento.riga === ora)
+            ));
+            setErrore('');
+        } catch {
+            setErrore('Non è stato possibile eliminare gli eventi della cella.');
+        }
+    };
 
     // elimina definitivamente tutti gli eventi
-    const ripulisci = () => {
-        setListaEventi([]);
-        localStorage.removeItem('eventi');
-    }
+    const ripulisci = async () => {
+        try {
+            await eliminaTuttiEventi();
+            setListaEventi([]);
+            setErrore('');
+        } catch {
+            setErrore('Non è stato possibile eliminare gli eventi.');
+        }
+    };
 
     return (
         <section className="agenda-page" aria-labelledby="agenda-title">
@@ -63,6 +103,8 @@ const Agenda = () => {
                     <span>{listaEventi.length === 1 ? 'impegno pianificato' : 'impegni pianificati'}</span>
                 </div>
             </header>
+
+            {errore && <p role="alert">{errore}</p>}
 
             <div className="weekly-agenda-layout">
                 <div className="agenda-form-panel">
@@ -84,8 +126,8 @@ const Agenda = () => {
                         <thead>
                             <tr>
                                 <th scope="col">Ora</th>
-                                {colonne.map((colonna, index) => (
-                                    <th key={index} scope="col">{colonna}</th>
+                                {colonne.map((giorno, index) => (
+                                    <th key={index} scope="col">{giorno}</th>
                                 ))}
                             </tr>
                         </thead>
@@ -100,11 +142,11 @@ const Agenda = () => {
                                     </th>
 
                                     {/* Celle dei giorni: mostrano gli eventi di quel giorno e quell'ora */}
-                                    {colonne.map((nomeColonna, index) => {
+                                    {colonne.map((nomeGiorno, index) => {
 
                                         // eventi che appartengono a questa cella
                                         const eventiCella = listaEventi.filter(
-                                            (e) => e.colonna === nomeColonna && e.riga === ora
+                                            (e) => e.colonna === nomeGiorno && e.riga === ora
                                         );
 
                                         // se c'è almeno un evento uso il colore del primo, altrimenti nessun colore

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import type { CategoriaDto } from '../creativa';
 import '../style/FormIdea.css';
 
 export interface CardData{
@@ -20,15 +21,16 @@ const cardInit: CardData = {
 }
 
 interface CardFormProps {
+    categorie: CategoriaDto[];
     onSubmit: (data: CardData) => void;
     //funzione di callback, si assicura che eseguire l'azione su un 'data' con la strutture di 'CardData' senza restituire nulla.
 }
 
-export const CardForm: React.FC<CardFormProps> = ({ onSubmit }) => {
+export const CardForm: React.FC<CardFormProps> = ({ categorie, onSubmit }) => {
 
     const [cardData, setCardData] = useState<CardData>(cardInit);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const name = e.target.name; //.name perchè sta per "titolo, categoria,.." in base al campo in cui avviene l'evento
         const value = name === 'budget' ? Number(e.target.value) : e.target.value;
         setCardData({
@@ -67,14 +69,19 @@ export const CardForm: React.FC<CardFormProps> = ({ onSubmit }) => {
             <div className="idea-form__row">
                 <div className="idea-form__field">
                     <label htmlFor="idea-categoria">Categoria</label>
-                    <input
+                    <select
                         id="idea-categoria"
-                        type="text"
                         name="categoria"
                         value={cardData.categoria}
                         onChange={handleChange}
-                        placeholder="Categoria"
-                    />
+                    >
+                        <option value="">Senza categoria</option>
+                        {categorie.map(categoria => (
+                            <option key={categoria.id} value={categoria.nome}>
+                                {categoria.nome}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 <div className="idea-form__field">

@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.dto.CategoriaResponse;
@@ -19,20 +18,28 @@ import com.example.demo.dto.IdeaRequest;
 import com.example.demo.dto.IdeaResponse;
 import com.example.demo.entity.Categoria;
 import com.example.demo.entity.Idea;
+import com.example.demo.service.SessioneUtente;
 import com.example.demo.service.ZonaCreativaService;
+
+import jakarta.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api")
 public class ZonaCreativaController {
 
     private final ZonaCreativaService zonaCreativaService;
+    private final SessioneUtente sessioneUtente;
 
-    public ZonaCreativaController(ZonaCreativaService zonaCreativaService) {
+    public ZonaCreativaController(
+            ZonaCreativaService zonaCreativaService,
+            SessioneUtente sessioneUtente) {
         this.zonaCreativaService = zonaCreativaService;
+        this.sessioneUtente = sessioneUtente;
     }
 
     @GetMapping("/idee")
-    public List<IdeaResponse> trovaIdee(@RequestParam Long utenteId) {
+    public List<IdeaResponse> trovaIdee(HttpSession sessione) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         return zonaCreativaService.trovaIdeeUtente(utenteId)
                 .stream()
                 .map(this::toResponse)
@@ -42,14 +49,16 @@ public class ZonaCreativaController {
     @GetMapping("/idee/{ideaId}")
     public IdeaResponse trovaIdea(
             @PathVariable Long ideaId,
-            @RequestParam Long utenteId) {
+            HttpSession sessione) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         return toResponse(zonaCreativaService.trovaIdeaUtente(ideaId, utenteId));
     }
 
     @PostMapping("/idee")
     public ResponseEntity<IdeaResponse> creaIdea(
             @RequestBody IdeaRequest richiesta,
-            @RequestParam Long utenteId) {
+            HttpSession sessione) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         Idea idea = zonaCreativaService.creaIdea(richiesta, utenteId);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(idea));
     }
@@ -58,20 +67,23 @@ public class ZonaCreativaController {
     public IdeaResponse aggiornaIdea(
             @PathVariable Long ideaId,
             @RequestBody IdeaRequest richiesta,
-            @RequestParam Long utenteId) {
+            HttpSession sessione) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         return toResponse(zonaCreativaService.aggiornaIdea(ideaId, richiesta, utenteId));
     }
 
     @DeleteMapping("/idee/{ideaId}")
     public ResponseEntity<Void> eliminaIdea(
             @PathVariable Long ideaId,
-            @RequestParam Long utenteId) {
+            HttpSession sessione) {
+        Long utenteId = sessioneUtente.richiediIdUtente(sessione);
         zonaCreativaService.eliminaIdea(ideaId, utenteId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/categorie")
-    public List<CategoriaResponse> trovaCategorie() {
+    public List<CategoriaResponse> trovaCategorie(HttpSession sessione) {
+        sessioneUtente.richiediIdUtente(sessione);
         return zonaCreativaService.trovaCategorie()
                 .stream()
                 .map(this::toResponse)

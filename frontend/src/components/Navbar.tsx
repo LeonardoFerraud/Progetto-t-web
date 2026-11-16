@@ -2,10 +2,16 @@ import { useState } from "react";
 import Agenda from './Agenda';
 import ZonaCreativa from './ZonaCreativa';
 import '../style/Navbar.css';
+import type { Utente } from '../auth';
 
 type Pagina = 'agenda' | 'zonacreativa';
 
-const Navbar = () =>{
+interface NavbarProps {
+    utente: Utente;
+    onLogout: () => void;
+}
+
+const Navbar = ({ utente, onLogout }: NavbarProps) =>{
 
     const [paginaAttiva, setPaginaAttiva] = useState<Pagina>('agenda');
 
@@ -23,6 +29,7 @@ const Navbar = () =>{
                     </span>
                 </div>
                 <div className="navbar__links">
+                    <span className="navbar__button">{utente.username}</span>
                     <button
                         className={agendaAttiva ? 'navbar__button navbar__button--active' : 'navbar__button'}
                         onClick={() => setPaginaAttiva('agenda')}
@@ -34,6 +41,9 @@ const Navbar = () =>{
                         onClick={() => setPaginaAttiva('zonacreativa')}
                     >
                         Zona creativa
+                    </button>
+                    <button className="navbar__button" onClick={onLogout}>
+                        Esci
                     </button>
                 </div>
             </nav>

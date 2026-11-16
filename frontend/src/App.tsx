@@ -1,9 +1,53 @@
+import { useEffect, useState } from 'react';
 import Navbar from "./components/Navbar";
+import LoginForm from "./components/LoginForm";
+import { logout, verificaSessione } from './auth';
+import type { Utente } from './auth';
 
 function App() {
+  const [utente, setUtente] = useState<Utente | null>(null);
+  const [verificaInCorso, setVerificaInCorso] = useState(true);
+  const [errore, setErrore] = useState('');
+
+  useEffect(() => {
+    verificaSessione()
+      .then(setUtente)
+      .catch(() => setErrore('Backend non raggiungibile. Avvia il server e ricarica la pagina.'))
+      .finally(() => setVerificaInCorso(false));
+  }, []);
+
+  const gestisciLogout = async () => {
+    try {
+      await logout();
+      setUtente(null);
+      setErrore('');
+    } catch {
+      setErrore('Non è stato possibile terminare la sessione.');
+    }
+  };
+
+  const gestisciLoginSuccess = (utenteAutenticato: Utente) => {
+    setUtente(utenteAutenticato);
+    setErrore('');
+  };
+
+  if (verificaInCorso) {
+    return <main className="welcome"><p>Verifica sessione...</p></main>;
+  }
+
+  if (!utente) {
+    return (
+      <div className="welcome">
+        {errore && <p role="alert">{errore}</p>}
+        <LoginForm onLoginSuccess={gestisciLoginSuccess} />
+      </div>
+    );
+  }
+
   return (
     <main className="welcome">
-      <Navbar/>
+      {errore && <p role="alert">{errore}</p>}
+      <Navbar utente={utente} onLogout={gestisciLogout} />
     </main>
   );
 }
