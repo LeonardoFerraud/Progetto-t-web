@@ -11,4 +11,6 @@ public interface IdeaRepo extends JpaRepository<Idea, Long> {
     List<Idea> findByUtente_Id(Long utenteId);
 
     Optional<Idea> findByIdAndUtente_Id(Long ideaId, Long utenteId);
+
+    void deleteByUtente_Id(Long utenteId);
 }
