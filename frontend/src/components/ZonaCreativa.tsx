@@ -3,10 +3,16 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { CardForm } from './cardIdea';
 import { Card } from './Card';
+import HideUser from './hideUser';
 import { caricaCategorie, caricaIdee, creaIdea, eliminaIdeaDalServer } from '../creativa';
 import type { CategoriaDto } from '../creativa';
+import type { Utente } from '../auth';
 
-const ZonaCreativa = () => {
+interface ZonaCreativaProps {
+    utente: Utente;
+}
+
+const ZonaCreativa = ({ utente }: ZonaCreativaProps) => {
 
     const [listaIdee, setListaIdee] = useState<CardData[]>([]);
     const [errore, setErrore] = useState('');
@@ -122,6 +128,8 @@ const ZonaCreativa = () => {
             <div className="card-form-container" id="idea-form-panel">
                 <CardForm categorie={categorie} onSubmit={addIdea} />
             </div>
+
+            {utente.ruolo === 'ADMIN' && <HideUser />}
 
         </section>
     );

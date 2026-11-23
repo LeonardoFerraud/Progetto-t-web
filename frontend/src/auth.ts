@@ -42,3 +42,14 @@ export async function logout(): Promise<void> {
         throw new Error('Non è stato possibile terminare la sessione.');
     }
 }
+
+export async function eliminaUtente(username: string): Promise<void> {
+    const response = await fetch(`/api/utenti?nome=${encodeURIComponent(username)}`, {
+        method: 'DELETE',
+    });
+
+    if (!response.ok) {
+        const dettaglio = await response.text();
+        throw new Error(`Non è stato possibile eliminare l'utente (${response.status}): ${dettaglio}`);
+    }
+}

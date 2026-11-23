@@ -49,7 +49,7 @@ const Navbar = ({ utente, onLogout }: NavbarProps) =>{
             </nav>
             <main className="navbar__content">
                 {paginaAttiva === 'agenda' && <Agenda />}
-                {paginaAttiva === 'zonacreativa' && <ZonaCreativa />}
+                {paginaAttiva === 'zonacreativa' && <ZonaCreativa utente={utente} />}
             </main>
         </div>
     );
